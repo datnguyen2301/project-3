@@ -215,12 +215,16 @@ class Server {
   }
 
   private async startWorkers() {
-    const { priceAlertWorker } = await import('./workers/priceAlertWorker');
-    const { limitOrderWorker } = await import('./workers/limitOrderWorker');
-    
-    priceAlertWorker.start();
-    limitOrderWorker.start();
-    logger.info('✅ Background workers started');
+    try {
+      const { priceAlertWorker } = await import('./workers/priceAlertWorker');
+      const { limitOrderWorker } = await import('./workers/limitOrderWorker');
+      
+      priceAlertWorker.start();
+      limitOrderWorker.start();
+      logger.info('✅ Background workers started');
+    } catch (error) {
+      logger.warn('⚠️ Failed to start workers, continuing without them:', error);
+    }
   }
 
   private setupGracefulShutdown() {
@@ -255,7 +259,11 @@ class Server {
 }
 
 // Create and start server
+console.log('🚀 Starting server...');
 const server = new Server();
-server.start();
+server.start().catch((err) => {
+  console.error('❌ Server failed to start:', err);
+  process.exit(1);
+});
 
 export default server;
