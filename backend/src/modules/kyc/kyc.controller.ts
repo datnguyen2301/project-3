@@ -62,12 +62,13 @@ export class KYCController {
         city,
         postalCode,
         country,
-        phoneNumber,
+        phoneNumber: _phoneNumber,
       } = req.body;
 
       // Support both field names
       const finalDocumentNumber = documentNumber || idNumber;
       const finalDocumentType = documentType || idType;
+      void _phoneNumber; // Suppress unused variable warning
 
       // Check if already verified
       const user = await prisma.user.findUnique({ where: { id: userId } });
