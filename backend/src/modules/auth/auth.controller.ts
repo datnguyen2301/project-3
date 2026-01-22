@@ -71,9 +71,10 @@ export class AuthController {
         },
       });
 
-      // Send verification email
-      await emailService.sendVerificationEmail(email, verificationToken);
-      logger.info(`Verification email sent to ${email}`);
+      // Send verification email (non-blocking)
+      emailService.sendVerificationEmail(email, verificationToken)
+        .then(() => logger.info(`Verification email sent to ${email}`))
+        .catch((err) => logger.warn(`Failed to send verification email to ${email}:`, err.message));
 
       // Generate tokens
       const accessToken = generateAccessToken(user.id, user.email);
