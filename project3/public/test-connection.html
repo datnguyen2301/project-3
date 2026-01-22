@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Backend Connection</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #1a1a1a; color: #fff; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #10b981; }
+        .error { background: #ef4444; }
+        button { padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #2563eb; }
+        pre { background: #2a2a2a; padding: 15px; border-radius: 5px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔗 Test Kết Nối Frontend ↔️ Backend</h1>
+    
+    <div>
+        <button onclick="testBackend()">Test Backend API</button>
+        <button onclick="testBinance()">Test Binance Direct</button>
+        <button onclick="testAllEndpoints()">Test All Endpoints</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+        const BINANCE_BASE = 'https://api.binance.com/api/v3';
+
+        async function testBackend() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h3>Testing Backend...</h3>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/tickers?limit=5`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    results.innerHTML += `<div class="result success">✅ Backend Connected! Status: ${response.status}</div>`;
+                    results.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    results.innerHTML += `<div class="result error">⚠️ Backend Error: ${data.error?.message || 'Unknown error'}</div>`;
+                    results.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                results.innerHTML += `<div class="result error">❌ Cannot connect to backend: ${error.message}</div>`;
+            }
+        }
+
+        async function testBinance() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h3>Testing Binance Direct...</h3>';
+            
+            try {
+                const response = await fetch(`${BINANCE_BASE}/ticker/24hr?symbols=["BTCUSDT","ETHUSDT"]`);
+                const data = await response.json();
+                
+                results.innerHTML += `<div class="result success">✅ Binance Connected! Status: ${response.status}</div>`;
+                results.innerHTML += `<pre>${JSON.stringify(data.slice(0, 2), null, 2)}</pre>`;
+            } catch (error) {
+                results.innerHTML += `<div class="result error">❌ Cannot connect to Binance: ${error.message}</div>`;
+            }
+        }
+
+        async function testAllEndpoints() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h3>Testing All Endpoints...</h3>';
+            
+            const endpoints = [
+                { name: 'Get All Tickers', url: `${API_BASE}/tickers?limit=3` },
+                { name: 'Get BTC Ticker', url: `${API_BASE}/tickers/BTCUSDT` },
+                { name: 'Get Order Book', url: `${API_BASE}/orderbook/BTCUSDT?limit=5` },
+                { name: 'Get Trades', url: `${API_BASE}/trades/BTCUSDT?limit=5` },
+                { name: 'Get Klines', url: `${API_BASE}/klines/BTCUSDT?interval=1h&limit=5` }
+            ];
+
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(endpoint.url);
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        results.innerHTML += `<div class="result success">✅ ${endpoint.name}: OK</div>`;
+                    } else {
+                        results.innerHTML += `<div class="result error">⚠️ ${endpoint.name}: ${data.error?.message || 'Error'}</div>`;
+                    }
+                } catch (error) {
+                    results.innerHTML += `<div class="result error">❌ ${endpoint.name}: ${error.message}</div>`;
+                }
+                
+                // Delay to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        }
+
+        // Auto test on load
+        window.onload = () => {
+            setTimeout(testBackend, 500);
+        };
+    </script>
+</body>
+</html>

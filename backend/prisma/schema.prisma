@@ -1,0 +1,564 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String              @id @default(uuid())
+  name               String
+  email              String              @unique
+  passwordHash       String              @map("password_hash")
+  role               UserRole            @default(USER)
+  isVerified         Boolean             @default(false) @map("is_verified")
+  isActive           Boolean             @default(true) @map("is_active")
+  kycStatus          KycStatus           @default(NOT_STARTED) @map("kyc_status")
+  twoFaEnabled       Boolean             @default(false) @map("two_fa_enabled")
+  twoFaSecret        String?             @map("two_fa_secret")
+  twoFaBackupCodes   String[]            @default([]) @map("two_fa_backup_codes")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  depositAddresses   DepositAddress[]
+  earnRewards        EarnReward[]
+  kycApplications    KycApplication[]
+  notifications      Notification[]
+  orderFills         OrderFill[]
+  orders             Order[]
+  portfolioHistory   PortfolioHistory[]
+  portfolios         Portfolio[]
+  refreshTokens      RefreshToken[]
+  securityLogs       SecurityLog[]
+  preferences        UserPreference?
+  userStakes         UserStake[]
+  verificationTokens VerificationToken[]
+  walletBalances     WalletBalance[]
+  walletTransactions WalletTransaction[]
+  fiatTransactions     FiatTransaction[]
+  bankAccounts         BankAccount[]
+  processedWithdrawals FiatTransaction[] @relation("ProcessedBy")
+  priceAlerts          PriceAlert[]
+  notificationSetting  NotificationSetting?
+
+  @@map("users")
+}
+
+model UserPreference {
+  id                   String   @id @default(uuid())
+  userId               String   @unique @map("user_id")
+  language             String   @default("en")
+  currency             String   @default("USD")
+  theme                String   @default("dark")
+  themeColor           String   @default("#3B82F6") @map("theme_color")
+  notificationsEnabled Boolean  @default(true) @map("notifications_enabled")
+  emailNotifications   Boolean  @default(true) @map("email_notifications")
+  pushNotifications    Boolean  @default(true) @map("push_notifications")
+  priceAlertSound      Boolean  @default(true) @map("price_alert_sound")
+  tradingConfirmation  Boolean  @default(true) @map("trading_confirmation")
+  timezone             String   @default("Asia/Ho_Chi_Minh")
+  dateFormat           String   @default("DD/MM/YYYY") @map("date_format")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model SecurityLog {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  action    String
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  status    String
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("security_logs")
+}
+
+model VerificationToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  token     String    @unique
+  type      TokenType
+  expiresAt DateTime  @map("expires_at")
+  used      Boolean   @default(false)
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("verification_tokens")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model WalletBalance {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  symbol    String
+  available Decimal  @default(0) @db.Decimal(36, 18)
+  locked    Decimal  @default(0) @db.Decimal(36, 18)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, symbol])
+  @@map("wallet_balances")
+}
+
+model WalletTransaction {
+  id            String                @id @default(uuid())
+  userId        String                @map("user_id")
+  type          WalletTransactionType
+  symbol        String
+  amount        Decimal               @db.Decimal(36, 18)
+  fee           Decimal               @default(0) @db.Decimal(36, 18)
+  status        TransactionStatus     @default(PENDING)
+  txHash        String?               @map("tx_hash")
+  address       String?
+  network       String?
+  memo          String?
+  referenceId   String?               @map("reference_id")
+  referenceType String?               @map("reference_type")
+  createdAt     DateTime              @default(now()) @map("created_at")
+  updatedAt     DateTime              @updatedAt @map("updated_at")
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallet_transactions")
+}
+
+model DepositAddress {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  symbol    String
+  address   String
+  network   String
+  memo      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, symbol, network])
+  @@map("deposit_addresses")
+}
+
+model Portfolio {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  symbol        String
+  amount        Decimal  @default(0) @db.Decimal(36, 18)
+  avgBuyPrice   Decimal  @default(0) @map("avg_buy_price") @db.Decimal(36, 8)
+  totalInvested Decimal  @default(0) @map("total_invested") @db.Decimal(36, 8)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, symbol])
+  @@map("portfolios")
+}
+
+model PortfolioHistory {
+  id                 String   @id @default(uuid())
+  userId             String   @map("user_id")
+  totalValue         Decimal  @map("total_value") @db.Decimal(36, 8)
+  totalPnl           Decimal  @default(0) @map("total_pnl") @db.Decimal(36, 8)
+  totalPnlPercentage Decimal  @default(0) @map("total_pnl_percentage") @db.Decimal(10, 2)
+  timestamp          DateTime @default(now())
+  snapshotData       Json     @map("snapshot_data")
+  createdAt          DateTime @default(now()) @map("created_at")
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("portfolio_history")
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  userId          String      @map("user_id")
+  symbol          String
+  side            OrderSide
+  type            OrderType
+  status          OrderStatus @default(OPEN)
+  price           Decimal?    @db.Decimal(36, 8)
+  stopPrice       Decimal?    @map("stop_price") @db.Decimal(36, 8)
+  trailingDelta   Decimal?    @map("trailing_delta") @db.Decimal(36, 8)
+  amount          Decimal     @db.Decimal(36, 18)
+  filledAmount    Decimal     @default(0) @map("filled_amount") @db.Decimal(36, 18)
+  remainingAmount Decimal     @map("remaining_amount") @db.Decimal(36, 18)
+  total           Decimal?    @db.Decimal(36, 8)
+  fee             Decimal     @default(0) @db.Decimal(36, 8)
+  feeCurrency     String?     @map("fee_currency")
+  linkedOrderId   String?     @map("linked_order_id")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  filledAt        DateTime?   @map("filled_at")
+  fills           OrderFill[]
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("orders")
+}
+
+model OrderFill {
+  id          String    @id @default(uuid())
+  orderId     String    @map("order_id")
+  userId      String    @map("user_id")
+  symbol      String
+  side        OrderSide
+  price       Decimal   @db.Decimal(36, 8)
+  amount      Decimal   @db.Decimal(36, 18)
+  fee         Decimal   @default(0) @db.Decimal(36, 8)
+  feeCurrency String?   @map("fee_currency")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("order_fills")
+}
+
+// FiatOrder và PaymentMethod đã được xóa - sử dụng FiatTransaction thay thế
+
+model EarnProduct {
+  id            String      @id @default(uuid())
+  symbol        String
+  name          String
+  type          EarnType
+  apy           Decimal     @db.Decimal(5, 2)
+  durationDays  Int?        @map("duration_days")
+  minAmount     Decimal     @map("min_amount") @db.Decimal(36, 18)
+  maxAmount     Decimal?    @map("max_amount") @db.Decimal(36, 18)
+  totalCapacity Decimal?    @map("total_capacity") @db.Decimal(36, 18)
+  totalStaked   Decimal     @default(0) @map("total_staked") @db.Decimal(36, 18)
+  isActive      Boolean     @default(true) @map("is_active")
+  riskLevel     String?     @map("risk_level")
+  description   String?
+  terms         String?
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  stakes        UserStake[]
+
+  @@map("earn_products")
+}
+
+model UserStake {
+  id                 String       @id @default(uuid())
+  userId             String       @map("user_id")
+  productId          String       @map("product_id")
+  symbol             String
+  amount             Decimal      @db.Decimal(36, 18)
+  apy                Decimal      @db.Decimal(5, 2)
+  startDate          DateTime     @default(now()) @map("start_date")
+  endDate            DateTime?    @map("end_date")
+  status             StakeStatus  @default(ACTIVE)
+  accumulatedRewards Decimal      @default(0) @map("accumulated_rewards") @db.Decimal(36, 18)
+  lastRewardDate     DateTime?    @map("last_reward_date")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+  rewards            EarnReward[]
+  product            EarnProduct  @relation(fields: [productId], references: [id])
+  user               User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_stakes")
+}
+
+model EarnReward {
+  id         String    @id @default(uuid())
+  stakeId    String    @map("stake_id")
+  userId     String    @map("user_id")
+  symbol     String
+  amount     Decimal   @db.Decimal(36, 18)
+  apy        Decimal?  @db.Decimal(5, 2)
+  rewardDate DateTime  @map("reward_date") @db.Date
+  createdAt  DateTime  @default(now()) @map("created_at")
+  stake      UserStake @relation(fields: [stakeId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("earn_rewards")
+}
+
+model KycApplication {
+  id               String        @id @default(uuid())
+  userId           String        @map("user_id")
+  level            Int           @default(1)
+  status           KycAppStatus  @default(PENDING)
+  firstName        String?       @map("first_name")
+  lastName         String?       @map("last_name")
+  dateOfBirth      DateTime?     @map("date_of_birth") @db.Date
+  nationality      String?
+  idType           String?       @map("id_type")
+  idNumber         String?       @map("id_number")
+  documentType     String?       @map("document_type")
+  documentNumber   String?       @map("document_number")
+  documentExpiry   DateTime?     @map("document_expiry") @db.Date
+  address          Json?
+  city             String?
+  postalCode       String?       @map("postal_code")
+  country          String?
+  frontDocumentUrl String?       @map("front_document_url")
+  backDocumentUrl  String?       @map("back_document_url")
+  selfieUrl        String?       @map("selfie_url")
+  documents        Json?
+  submittedAt      DateTime?     @map("submitted_at")
+  rejectionReason  String?       @map("rejection_reason")
+  reviewedBy       String?       @map("reviewed_by")
+  reviewedAt       DateTime?     @map("reviewed_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Documents được lưu trong trường 'documents' JSON
+
+  @@map("kyc_applications")
+}
+
+// KycDocument đã được xóa - documents lưu trực tiếp trong KycApplication.documents (JSON)
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String
+  title     String
+  message   String
+  data      Json     @default("{}")
+  link      String?
+  isRead    Boolean  @default(false) @map("is_read")
+  emailSent Boolean  @default(false) @map("email_sent")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum KycStatus {
+  NOT_STARTED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum WalletTransactionType {
+  DEPOSIT
+  WITHDRAW
+  TRADE
+  FEE
+  EARN_REWARD
+  FIAT_ORDER
+  MARGIN_BORROW
+  MARGIN_REPAY
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderType {
+  LIMIT
+  MARKET
+  STOP_LOSS
+  STOP_LIMIT
+  STOP_LOSS_LIMIT
+  TAKE_PROFIT
+  TAKE_PROFIT_LIMIT
+  TRAILING_STOP
+}
+
+enum OrderStatus {
+  PENDING
+  OPEN
+  FILLED
+  PARTIALLY_FILLED
+  CANCELLED
+  REJECTED
+}
+
+enum FiatOrderStatus {
+  PENDING
+  PENDING_PAYMENT
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum EarnType {
+  FLEXIBLE
+  LOCKED
+}
+
+enum StakeStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum KycAppStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model FavoritePair {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  symbol    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, symbol])
+  @@map("favorite_pairs")
+}
+
+model PriceAlert {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  symbol         String
+  targetPrice    Decimal   @map("target_price") @db.Decimal(20, 8)
+  lastPrice      Decimal?  @map("last_price") @db.Decimal(20, 8)
+  condition      String // ABOVE, BELOW, CROSS_UP, CROSS_DOWN
+  note           String?
+  triggered      Boolean   @default(false)
+  triggeredAt    DateTime? @map("triggered_at")
+  triggeredPrice Decimal?  @map("triggered_price") @db.Decimal(20, 8)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("price_alerts")
+}
+
+model NotificationSetting {
+  id                 String  @id @default(uuid())
+  userId             String  @unique @map("user_id")
+  emailNotifications Boolean @default(true) @map("email_notifications")
+  pushNotifications  Boolean @default(true) @map("push_notifications")
+  orderFilled        Boolean @default(true) @map("order_filled")
+  priceAlert         Boolean @default(true) @map("price_alert")
+  deposit            Boolean @default(true)
+  withdrawal         Boolean @default(true)
+  security           Boolean @default(true)
+  marketing          Boolean @default(false)
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_settings")
+}
+
+model FiatTransaction {
+  id              String                @id @default(uuid())
+  userId          String                @map("user_id")
+  type            FiatTransactionType
+  fiatCurrency    String                @map("fiat_currency")
+  fiatAmount      Decimal               @map("fiat_amount") @db.Decimal(18, 2)
+  cryptoSymbol    String?               @map("crypto_symbol")
+  cryptoAmount    Decimal?              @map("crypto_amount") @db.Decimal(36, 18)
+  method          FiatPaymentMethod
+  status          FiatTransactionStatus
+  provider        String?
+  transactionId   String?               @unique @map("transaction_id") // ID từ payment gateway (VNPAY, MOMO, STRIPE)
+  gatewayResponse Json?                 @map("gateway_response") // Response từ payment gateway
+  metadata        Json?
+  
+  // Withdrawal specific fields
+  bankAccountId   String?               @map("bank_account_id")
+  bankName        String?               @map("bank_name")
+  bankAccountNumber String?             @map("bank_account_number")
+  bankAccountName String?               @map("bank_account_name")
+  adminNote       String?               @map("admin_note")
+  processedById   String?               @map("processed_by_id")
+  processedAt     DateTime?             @map("processed_at")
+  fee             Decimal?              @db.Decimal(18, 2) // Phí rút tiền
+  netAmount       Decimal?              @map("net_amount") @db.Decimal(18, 2) // Số tiền thực nhận = fiatAmount - fee
+  
+  completedAt     DateTime?             @map("completed_at")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankAccount     BankAccount?          @relation(fields: [bankAccountId], references: [id])
+  processedBy     User?                 @relation("ProcessedBy", fields: [processedById], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([transactionId])
+  @@index([type])
+  @@map("fiat_transactions")
+}
+
+// Bảng lưu thông tin tài khoản ngân hàng của user
+model BankAccount {
+  id                String            @id @default(uuid())
+  userId            String            @map("user_id")
+  bankName          String            @map("bank_name") // Tên ngân hàng (VCB, TCB, MB, ...)
+  bankCode          String?           @map("bank_code") // Mã ngân hàng
+  accountNumber     String            @map("account_number")
+  accountName       String            @map("account_name") // Tên chủ tài khoản
+  branch            String?           // Chi nhánh (optional)
+  isVerified        Boolean           @default(false) @map("is_verified")
+  isDefault         Boolean           @default(false) @map("is_default")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fiatTransactions  FiatTransaction[]
+
+  @@unique([userId, accountNumber, bankCode])
+  @@index([userId])
+  @@map("bank_accounts")
+}
+
+enum FiatTransactionType {
+  DEPOSIT
+  WITHDRAW
+}
+
+enum FiatPaymentMethod {
+  CARD
+  BANK_TRANSFER
+  PAYPAL
+  VNPAY
+  MOMO
+  ZALOPAY
+  STRIPE
+}
+
+enum FiatTransactionStatus {
+  PENDING     // Chờ xử lý
+  APPROVED    // Admin đã duyệt (for withdrawal)
+  PROCESSING  // Đang xử lý chuyển khoản
+  COMPLETED   // Hoàn thành
+  FAILED      // Thất bại
+  CANCELLED   // Đã hủy
+  REJECTED    // Admin từ chối (for withdrawal)
+}
+
+// System Settings cho admin config
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
