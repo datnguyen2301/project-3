@@ -372,9 +372,10 @@ export class AuthController {
         },
       });
 
-      // Send verification email
-      await emailService.sendVerificationEmail(user.email, verificationToken);
-      logger.info(`Verification email resent to ${user.email}`);
+      // Send verification email (non-blocking)
+      emailService.sendVerificationEmail(user.email, verificationToken)
+        .then(() => logger.info(`Verification email resent to ${user.email}`))
+        .catch((err) => logger.warn(`Failed to resend verification email:`, err.message));
 
       return successResponse(res, { message: 'Verification email sent' });
     } catch (error) {
