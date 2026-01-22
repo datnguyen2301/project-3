@@ -54,11 +54,20 @@ class Server {
     this.app.use(helmet());
 
     // CORS
+    const allowedOrigins = config.nodeEnv === 'development' 
+      ? ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001']
+      : [config.frontendUrl, 'https://project-3-tau-seven.vercel.app'];
+    
     this.app.use(
       cors({
-        origin: config.nodeEnv === 'development' 
-          ? ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001']
-          : config.frontendUrl,
+        origin: (origin, callback) => {
+          // Allow requests with no origin (mobile apps, curl, etc)
+          if (!origin) return callback(null, true);
+          if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+          }
+          return callback(null, true); // Allow all for now in production
+        },
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],
