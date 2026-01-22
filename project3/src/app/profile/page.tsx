@@ -236,7 +236,7 @@ export default function ProfilePage() {
                       <div>
                         <label className="block text-sm text-gray-400 mb-2">Trạng Thái KYC</label>
                         <div className={`px-4 py-3 rounded border ${
-                          user.kycStatus === 'VERIFIED' || user.kycStatus === 'APPROVED'
+                          user.kycStatus === 'APPROVED'
                             ? "bg-green-500/10 border-green-500 text-green-500"
                             : user.kycStatus === 'PENDING'
                             ? "bg-yellow-500/10 border-yellow-500 text-yellow-500"
@@ -244,7 +244,7 @@ export default function ProfilePage() {
                             ? "bg-red-500/10 border-red-500 text-red-500"
                             : "bg-gray-500/10 border-gray-500 text-gray-400"
                         }`}>
-                          {user.kycStatus === 'VERIFIED' || user.kycStatus === 'APPROVED'
+                          {user.kycStatus === 'APPROVED'
                             ? "Đã xác minh"
                             : user.kycStatus === 'PENDING'
                             ? "Đang chờ duyệt"
