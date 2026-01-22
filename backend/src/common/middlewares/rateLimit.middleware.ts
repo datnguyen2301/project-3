@@ -3,7 +3,7 @@ import config from '../../config';
 
 export const generalLimiter = rateLimit({
   windowMs: config.nodeEnv === 'development' ? 60 * 1000 : config.rateLimit.windowMs, // 1 min in dev
-  max: config.nodeEnv === 'development' ? 1000 : config.rateLimit.maxRequests, // 1000 in dev
+  max: config.nodeEnv === 'development' ? 1000 : 500, // Increased for production
   message: {
     success: false,
     error: {
@@ -17,7 +17,7 @@ export const generalLimiter = rateLimit({
 
 export const authLimiter = rateLimit({
   windowMs: config.nodeEnv === 'development' ? 1 * 60 * 1000 : 15 * 60 * 1000, // 1 min in dev, 15 min in prod
-  max: config.nodeEnv === 'development' ? 1000 : 50, // 1000 in dev, 50 in prod
+  max: config.nodeEnv === 'development' ? 1000 : 100, // Increased for production
   message: {
     success: false,
     error: {
@@ -30,7 +30,7 @@ export const authLimiter = rateLimit({
 
 export const tradingLimiter = rateLimit({
   windowMs: config.nodeEnv === 'development' ? 60 * 1000 : 60 * 1000, // 1 minute
-  max: config.nodeEnv === 'development' ? 500 : 30, // 500 in dev, 30 in prod
+  max: config.nodeEnv === 'development' ? 500 : 100, // Increased for production
   message: {
     success: false,
     error: {
